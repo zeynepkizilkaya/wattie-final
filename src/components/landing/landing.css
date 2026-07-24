@@ -1,0 +1,594 @@
+/* Prevent page scrolling completely to stop top black bar on scroll */
+html, body {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important;
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+  background: #06090f;
+}
+
+.landing-page {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #06090f;
+  color: var(--text-1);
+}
+
+/* Lightning Overlay SVG Container */
+.lightning-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.lightning-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Black Screen Overlay for Initial Intro */
+.intro-black-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #000000;
+  pointer-events: none;
+}
+
+/* 3D Canvas Container */
+.smart-house-canvas-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  cursor: pointer;
+}
+
+/* Ambient Bottom Gradient for High Contrast Text Legibility (WCAG AA Compliance) */
+.landing-atmosphere-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    0deg,
+    rgba(6, 9, 15, 0.94) 0%,
+    rgba(6, 9, 15, 0.5) 35%,
+    transparent 65%
+  );
+}
+
+/* Main Content Container Layout — Grid with Vertically Centered Login Panel */
+.landing-content-container {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 410px;
+  padding: 3vh 4vw 3vh;
+  gap: 3vw;
+  box-sizing: border-box;
+}
+
+/* ─── Left Side: Hero Copy (Visual Hierarchy - Subtle Background) ─── */
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: auto;
+  padding-bottom: 1vh;
+  opacity: 0.92;
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 760px;
+}
+
+.brand-header-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(124, 158, 255, 0.1);
+  border: 1px solid rgba(124, 158, 255, 0.25);
+  padding: 4px 12px;
+  border-radius: 20px;
+  width: fit-content;
+  backdrop-filter: blur(16px);
+  margin-bottom: 2px;
+}
+
+.brand-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--volt);
+  box-shadow: 0 0 8px var(--volt);
+}
+
+.brand-dot.energy-pulse {
+  animation: voltPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes voltPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px var(--volt);
+  }
+  50% {
+    transform: scale(1.4);
+    box-shadow: 0 0 16px var(--volt), 0 0 24px var(--arc);
+  }
+}
+
+.eyebrow {
+  color: var(--volt);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+}
+
+.brand-title {
+  font-size: clamp(30px, 3.2vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  line-height: 1.0;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.95);
+}
+
+.brand-tagline {
+  font-size: clamp(13px, 1.25vw, 16.5px);
+  font-weight: 600;
+  color: var(--arc);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
+}
+
+.brand-description-text {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #cbd5e1;
+  max-width: 620px;
+  margin-top: 1px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+/* Glassmorphism Feature Pills with Blur & High Contrast Gradient Overlay */
+.feature-row-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.feature-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 15, 25, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 7px 13px;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.pill-icon {
+  font-size: 14px;
+}
+
+.pill-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.pill-text strong {
+  font-size: 11px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pill-text span {
+  font-size: 9.5px;
+  color: #94a3b8;
+}
+
+/* Geliştirici Ekip & LinkedIn Chips */
+.dev-team-credits {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.credits-label {
+  font-size: 10.5px;
+  color: #64748b;
+  letter-spacing: 0.05em;
+}
+
+.dev-members-list {
+  display: flex;
+  gap: 8px;
+}
+
+.dev-member-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(124, 158, 255, 0.08);
+  border: 1px solid rgba(124, 158, 255, 0.22);
+  color: #cbd5e1;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.dev-member-chip:hover {
+  background: rgba(124, 158, 255, 0.2);
+  border-color: var(--arc);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.linkedin-icon {
+  background: #0077b5;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 8.5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* ─── Right Side: Glassmorphism Primary Focus Login Card ─── */
+.landing-login {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.login-card-wrapper {
+  width: 100%;
+  max-width: 395px;
+}
+
+/* Form Primary Focus State (Öne Çıkan Tasarım) */
+.login-panel.primary-focus {
+  width: 100%;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  background: rgba(10, 15, 24, 0.92) !important;
+  border: 1px solid rgba(255, 201, 60, 0.35) !important;
+  backdrop-filter: blur(36px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(180%) !important;
+  box-shadow: 0 0 40px rgba(255, 201, 60, 0.15), 0 30px 90px rgba(0, 0, 0, 0.96) !important;
+  border-radius: var(--radius-md) !important;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.login-panel.primary-focus:hover {
+  border-color: rgba(255, 201, 60, 0.6) !important;
+  box-shadow: 0 0 50px rgba(255, 201, 60, 0.22), 0 30px 90px rgba(0, 0, 0, 0.96) !important;
+}
+
+.login-header {
+  margin-bottom: 14px;
+}
+
+.login-eyebrow {
+  color: var(--volt);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.login-panel h2 {
+  font-size: 22px;
+  color: #ffffff;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.login-sub {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+  font-size: 11.5px;
+  color: #e2e8f0;
+}
+
+/* Password Input Wrapper with Eye Toggle Button */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+}
+
+.toggle-password-btn:hover {
+  color: #ffffff;
+}
+
+/* Explicit Focus States */
+.field input {
+  background: rgba(4, 7, 12, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: #ffffff;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.field input:focus {
+  border-color: var(--volt);
+  background: rgba(124, 158, 255, 0.16);
+  box-shadow: 0 0 0 3px rgba(255, 201, 60, 0.25);
+  outline: none;
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  margin-bottom: 14px;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.remember-me input {
+  accent-color: var(--volt);
+}
+
+.forgot-link {
+  color: var(--arc);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.forgot-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin: -4px 0 10px;
+  background: rgba(255, 71, 87, 0.12);
+  border: 1px solid rgba(255, 71, 87, 0.25);
+  padding: 7px 10px;
+  border-radius: 6px;
+}
+
+/* ─── Button Hierarchy (Birincil ve İkincil Ayrımı Netleştirildi) ─── */
+/* Primary Action Button (Giriş Yap) */
+.btn-primary {
+  background: var(--volt);
+  color: #0d0a00;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 11.5px;
+  font-weight: 700;
+  font-size: 13.5px;
+  transition: all 0.2s ease;
+  margin-bottom: 10px;
+  width: 100%;
+  box-shadow: 0 6px 20px rgba(255, 201, 60, 0.35);
+  cursor: pointer;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 26px rgba(255, 201, 60, 0.5);
+  background: #ffd32a;
+}
+
+/* Secondary Action Button (Demo Modu - Outline/Ghost Stili) */
+.btn-demo-outline {
+  background: transparent;
+  border: 1px solid rgba(124, 158, 255, 0.35);
+  color: #7c9eff;
+  border-radius: var(--radius-sm);
+  padding: 9.5px;
+  font-weight: 600;
+  font-size: 11.5px;
+  transition: all 0.2s ease;
+  width: 100%;
+  cursor: pointer;
+}
+
+.btn-demo-outline:hover:not(:disabled) {
+  background: rgba(124, 158, 255, 0.12);
+  border-color: var(--arc);
+  color: #ffffff;
+}
+
+/* Security & Trust Badge */
+.security-trust-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.security-trust-badge svg {
+  color: var(--volt);
+  flex-shrink: 0;
+}
+
+.login-hint {
+  margin-top: 10px;
+  font-size: 9.5px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* Auth Loading Overlay Inside Login Card */
+.auth-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(8, 12, 18, 0.96);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.loading-spinner-ring {
+  width: 38px;
+  height: 38px;
+  border: 3px solid rgba(124, 158, 255, 0.15);
+  border-top-color: var(--volt);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-step-text {
+  font-size: 12px;
+  color: #ffffff;
+  margin-bottom: 14px;
+  min-height: 32px;
+}
+
+.loading-progress-bar {
+  width: 80%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loading-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--arc), var(--volt));
+  border-radius: 2px;
+}
+
+/* ─── Responsive Design (Dar Ekranlarda Mobil Uyum) ─── */
+@media (max-width: 960px) {
+  .landing-content-container {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+    padding: 24px 4vw 30px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Mobilde Login Kartı Öne Alınır */
+  .landing-login {
+    order: 1;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .login-card-wrapper {
+    max-width: 100%;
+  }
+
+  /* Sol Başlık ve Kartlar Mobilde Formun Altına Geçer */
+  .landing-hero {
+    order: 2;
+    padding-bottom: 0;
+    opacity: 1;
+  }
+
+  .feature-row-horizontal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .feature-row-horizontal {
+    grid-template-columns: 1fr;
+  }
+}

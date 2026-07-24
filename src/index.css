@@ -1,0 +1,128 @@
+:root {
+  --void: #0a0d13;
+  --void-deep: #05070a;
+  --panel: rgba(20, 25, 36, 0.58);
+  --panel-solid: #141926;
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --grid-line: rgba(124, 158, 255, 0.06);
+
+  --volt: #ffc93c;
+  --volt-dim: #a9812a;
+  --current: #3ddc97;
+  --current-dim: #2a8f65;
+  --danger: #ff4757;
+  --danger-dim: #a6303e;
+  --arc: #7c9eff;
+  --arc-dim: #4a5fa8;
+
+  --text-1: #edeff4;
+  --text-2: #aeb4c2;
+  --text-3: #6c7486;
+
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--text-1);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+input {
+  font-family: var(--font-body);
+}
+
+::selection {
+  background: var(--volt);
+  color: #1a1400;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 158, 255, 0.25);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 158, 255, 0.4);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.glass-panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.circuit-bg {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.route-fallback {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--volt);
+  outline-offset: 2px;
+}
