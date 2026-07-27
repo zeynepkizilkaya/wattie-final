@@ -2,3 +2,7 @@ node_modules
 dist
 .env
 *.log
+wattie-3d-ui/
+wattie-remote-repo/
+wattiesonfrontend/
+public/models/modern-villa.glb

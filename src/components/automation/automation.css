@@ -1,0 +1,276 @@
+.automation-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.automation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.automation-header h2 {
+  font-size: 22px;
+  color: var(--text-1);
+}
+
+.automation-header .subtitle {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rule-card {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--panel-solid);
+}
+
+.rule-left {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.rule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rule-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rule-title-row h3 {
+  font-size: 15px;
+  color: var(--text-1);
+}
+
+.status-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.status-badge.active { background: var(--current-dim); color: var(--current); }
+.status-badge.paused { background: var(--clr-warning-dim); color: var(--clr-warning); }
+
+.rule-desc {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.rule-meta-row {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+
+.rule-meta-row strong {
+  color: var(--text-1);
+}
+
+.rule-meta-row .text-current {
+  color: var(--current);
+}
+
+.rule-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.toggle-btn {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--panel-border);
+  border: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.toggle-btn.active {
+  background: var(--current);
+}
+
+.toggle-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.25s ease;
+}
+
+.toggle-btn.active .toggle-thumb {
+  transform: translateX(20px);
+}
+
+.delete-rule-btn {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: var(--danger);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.delete-rule-btn:hover {
+  opacity: 1;
+}
+
+.performance-panel {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--panel-solid);
+}
+
+.performance-content {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+}
+
+.perf-kpi-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.perf-kpi-box {
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perf-kpi-box span {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.perf-kpi-box strong {
+  font-size: 16px;
+  color: var(--text-1);
+}
+
+.perf-kpi-box .text-success {
+  color: var(--current);
+}
+
+/* Modal styles */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--panel-solid);
+  padding: 22px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid var(--panel-border);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 16px;
+  color: var(--text-1);
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.rule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-field label {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.form-field input, .form-field select, .form-field textarea {
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--text-1);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.form-field select option {
+  background: var(--panel-solid);
+  color: var(--text-1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}

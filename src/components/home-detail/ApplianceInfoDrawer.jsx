@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function statusOf(a) {
@@ -6,13 +7,35 @@ function statusOf(a) {
   return "ok";
 }
 
-export default function ApplianceInfoDrawer({ groupName, appliances, onClose }) {
-  const group = appliances.filter((a) => a.name === groupName);
+export default function ApplianceInfoDrawer({ groupName, appliance, appliances = [], onClose }) {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose?.();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  // Support single appliance passed directly or group of appliances
+  let group = [];
+  let title = "";
+
+  if (appliance) {
+    group = [appliance];
+    title = appliance.name;
+  } else if (groupName && Array.isArray(appliances)) {
+    group = appliances.filter((a) => a.name === groupName);
+    title = groupName;
+  }
+
+  const isOpen = group.length > 0;
   const anomalousCount = group.filter((a) => a.isAnomalous).length;
 
   return (
     <AnimatePresence>
-      {groupName && (
+      {isOpen && (
         <>
           <motion.div
             className="drawer-backdrop"
@@ -31,13 +54,13 @@ export default function ApplianceInfoDrawer({ groupName, appliances, onClose }) 
             <div className="drawer-header">
               <div>
                 <span className="eyebrow mono">CİHAZ DETAYI</span>
-                <h3>{groupName}</h3>
+                <h3>{title}</h3>
               </div>
               <button className="btn-icon" onClick={onClose} aria-label="Kapat">✕</button>
             </div>
 
             <p className="drawer-sub">
-              Evde <strong>{group.length}</strong> adet {groupName.toLowerCase()} kayıtlı
+              Evde <strong>{group.length}</strong> adet {title.toLowerCase()} kayıtlı
               {anomalousCount > 0 && (
                 <> — <span className="text-danger">{anomalousCount} tanesi anomali bildiriyor</span></>
               )}
@@ -52,7 +75,7 @@ export default function ApplianceInfoDrawer({ groupName, appliances, onClose }) 
                   <div key={a.id} className={`drawer-device ${status}`}>
                     <div className="drawer-device-top">
                       <span className={`status-dot ${status}`} />
-                      <span>{a.room}</span>
+                      <span>{a.room} {a.homeName ? `· ${a.homeName}` : ""}</span>
                       <span className={`appliance-row-status ${status}`}>
                         {status === "anomalous" ? "Anomali" : status === "warn" ? "Sınırda" : "Normal"}
                       </span>

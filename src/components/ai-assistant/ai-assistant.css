@@ -1,0 +1,139 @@
+.ai-assistant-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.ai-assistant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.ai-assistant-header h2 {
+  font-size: 22px;
+  color: var(--text-1);
+}
+
+.ai-assistant-header .subtitle {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.ai-actions-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.home-filter-dropdown select {
+  background: transparent;
+  border: none;
+  color: var(--text-1);
+  font-size: 12.5px;
+  padding: 8px 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.home-filter-dropdown select option {
+  background: var(--panel-solid);
+  color: var(--text-1);
+}
+
+.advisories-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.advisory-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--panel-solid);
+  border: 1px solid var(--panel-border);
+}
+
+.card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.meta-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-badge {
+  font-size: 11px;
+  background: var(--arc-dim);
+  color: var(--arc);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.trigger-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+
+.trigger-badge.danger { background: var(--danger-dim); color: var(--danger); }
+.trigger-badge.warning { background: var(--clr-warning-dim); color: var(--clr-warning); }
+.trigger-badge.anomaly { background: rgba(255, 71, 87, 0.2); color: var(--danger); }
+.trigger-badge.info { background: var(--current-dim); color: var(--current); }
+
+.adv-date {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.adv-subject {
+  font-size: 16px;
+  color: var(--text-1);
+}
+
+.adv-body {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+.adv-card-footer {
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.ai-tag {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.ai-empty-card {
+  padding: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel-solid);
+}
+
+.ai-empty-card h3 {
+  font-size: 18px;
+  color: var(--text-1);
+}
+
+.ai-empty-card p {
+  font-size: 13px;
+  color: var(--text-2);
+}

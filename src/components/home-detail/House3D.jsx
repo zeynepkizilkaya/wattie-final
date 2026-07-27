@@ -1,366 +1,330 @@
-import { Suspense, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Html, ContactShadows } from "@react-three/drei";
+import { Suspense, useMemo, useRef, useState, Component, useEffect } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useGLTF, OrbitControls, Html, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 
-const ROOM_ZONES = {
-  "Oturma Odası": { cx: -1.05, cz: 1.05 },
-  Mutfak: { cx: 1.05, cz: 1.05 },
-  "Yatak Odası": { cx: -1.05, cz: -1.05 },
-  Banyo: { cx: 1.05, cz: -1.05 },
-};
+// Preload GLTF modern_house.glb
+useGLTF.preload("/models/modern_house.glb");
 
-const STATUS_COLOR = {
-  anomalous: "#ff4757",
-  warn: "#ffc93c",
-  ok: "#3ddc97",
-};
-
-function statusOf(a) {
-  if (a.isAnomalous) return "anomalous";
-  if (a.currentWatt > a.safeWatt) return "warn";
-  return "ok";
+/* ─── Error Boundary ─── */
+class GLTFErrorBoundary extends Component {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error) {
+    console.warn("ModernVilla GLTF load fallback triggered:", error?.message);
+  }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
 }
 
-function layoutAppliances(appliances) {
-  const grouped = {};
-  appliances.forEach((a) => {
-    const key = a.room;
-    grouped[key] = grouped[key] || [];
-    grouped[key].push(a);
-  });
-  const positioned = [];
-  Object.entries(grouped).forEach(([room, list]) => {
-    const zone = ROOM_ZONES[room] || { cx: 0, cz: 0 };
-    list.forEach((a, i) => {
-      const offset = (i - (list.length - 1) / 2) * 0.42;
-      positioned.push({
-        ...a,
-        pos: [zone.cx + offset * 0.6, 0, zone.cz + offset * 0.35],
-      });
-    });
-  });
-  return positioned;
-}
-
-/* ─── Appliance 3D model ─── */
-function ApplianceModel({ appliance, onSelect }) {
-  const status = statusOf(appliance);
-  const color = STATUS_COLOR[status];
-  const ref = useRef();
+/* ─── Modern Villa Model Instance (Clean, no orange ground dirt) ─── */
+function ModernVillaInstance({ position, home, isSelected, onSelect }) {
+  const { scene } = useGLTF("/models/modern_house.glb");
   const [hovered, setHovered] = useState(false);
 
-  useFrame(() => {
-    if (!ref.current) return;
-    if (status === "anomalous") {
-      ref.current.material.emissiveIntensity = 0.6 + Math.sin(Date.now() * 0.005) * 0.4;
+  // Clone GLTF scene while hiding/recoloring any orange ground slab
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.traverse((child) => {
+      if (child.isMesh && child.material) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((mat) => {
+          if (mat.map) {
+            mat.map.colorSpace = THREE.SRGBColorSpace;
+          }
+          const colorHex = mat.color ? mat.color.getHexString() : "";
+          if (colorHex.startsWith("c2") || colorHex.startsWith("b4") || colorHex.startsWith("d9") || colorHex.startsWith("78")) {
+            mat.color = new THREE.Color("#1e293b");
+          }
+          mat.roughness = 0.35;
+          mat.metalness = 0.1;
+          mat.needsUpdate = true;
+        });
+      }
+    });
+    return clone;
+  }, [scene]);
+
+  const { center, min } = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(clonedScene);
+    const c = new THREE.Vector3();
+    box.getCenter(c);
+    return { center: c, min: box.min };
+  }, [clonedScene]);
+
+  const quotaPct = home ? Math.min(100, Math.round((home.usedKwh / home.quotaKwh) * 100)) : 0;
+  const isPenalty = home?.tariffState === "PENALTY" || quotaPct >= 100;
+  const isWarning = home?.tariffState === "WARNING" || (quotaPct >= 80 && !isPenalty);
+
+  return (
+    <group
+      position={position}
+      rotation={[0, -0.34, 0]}
+      scale={0.9}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={() => {
+        setHovered(false);
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect?.(home);
+      }}
+    >
+      {/* Villa Model */}
+      <primitive object={clonedScene} position={[-center.x, -min.y, -center.z]} />
+
+      {/* Floating Tag Overhead */}
+      {home && (
+        <Html
+          position={[0, 7.4, 0]}
+          center
+          distanceFactor={22}
+          style={{ pointerEvents: "none" }}
+        >
+          <div
+            className={`neighborhood-house-pill ${isSelected ? "selected" : ""} ${
+              isPenalty ? "penalty" : isWarning ? "warning" : "normal"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.(home);
+            }}
+            style={{ pointerEvents: "auto" }}
+          >
+            <div className="pill-name">{home.name}</div>
+            <div className="pill-sub mono">{home.usedKwh} kWh (%{quotaPct})</div>
+          </div>
+        </Html>
+      )}
+
+      {/* Selection Glow Marker */}
+      {(isSelected || hovered) && (
+        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[4.4, 4.8, 32]} />
+          <meshBasicMaterial color={isSelected ? "#2563eb" : "#16a34a"} transparent opacity={0.85} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function ProceduralHouseInstance({ position, home, isSelected, onSelect }) {
+  return (
+    <group position={position} onClick={(e) => { e.stopPropagation(); onSelect?.(home); }}>
+      <mesh position={[0, 1.2, 0]}>
+        <boxGeometry args={[3.8, 2.4, 3.8]} />
+        <meshStandardMaterial color={isSelected ? "#2563eb" : "#e2e8f0"} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 2.8, 0]} rotation={[0, Math.PI / 4, 0]}>
+        <coneGeometry args={[3.0, 1.2, 4]} />
+        <meshStandardMaterial color="#d97706" roughness={0.4} />
+      </mesh>
+      {home && (
+        <Html position={[0, 5.5, 0]} center distanceFactor={22} style={{ pointerEvents: "none" }}>
+          <div
+            className={`neighborhood-house-pill ${isSelected ? "selected" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.(home);
+            }}
+            style={{ pointerEvents: "auto" }}
+          >
+            <div className="pill-name">{home.name}</div>
+            <div className="pill-sub mono">{home.usedKwh} kWh</div>
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+}
+
+function FloatingDioramaIsland({ count }) {
+  const islandWidth = Math.max(160, count * 30);
+
+  return (
+    <group position={[0, -0.4, 0]}>
+      {/* Main Floating Platform Block */}
+      <mesh position={[0, -0.4, 0]} receiveShadow castShadow>
+        <boxGeometry args={[islandWidth, 0.8, 22]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.5} metalness={0.2} />
+      </mesh>
+
+      {/* Lawn Top Layer */}
+      <mesh position={[0, 0.01, -2]} receiveShadow>
+        <boxGeometry args={[islandWidth - 2, 0.05, 12]} />
+        <meshStandardMaterial color="#166534" roughness={0.7} />
+      </mesh>
+
+      {/* Main Asphalt Road Strip */}
+      <mesh position={[0, 0.02, 5]}>
+        <boxGeometry args={[islandWidth - 2, 0.06, 6]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.5} />
+      </mesh>
+
+      {/* Sidewalk Border Curb */}
+      <mesh position={[0, 0.03, 1.8]}>
+        <boxGeometry args={[islandWidth - 2, 0.08, 0.5]} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.4} />
+      </mesh>
+
+      {/* Yellow Center Road Stripes */}
+      {Array.from({ length: Math.ceil(islandWidth / 6) }).map((_, i) => (
+        <mesh
+          key={`stripe-${i}`}
+          position={[-islandWidth / 2 + i * 6 + 3, 0.06, 5]}
+        >
+          <boxGeometry args={[3, 0.02, 0.2]} />
+          <meshBasicMaterial color="#f59e0b" transparent opacity={0.9} />
+        </mesh>
+      ))}
+
+      {/* Glowing Neon Blue Platform Edge Trim */}
+      <mesh position={[0, -0.4, 11.05]}>
+        <boxGeometry args={[islandWidth, 0.1, 0.1]} />
+        <meshBasicMaterial color="#2563eb" />
+      </mesh>
+      <mesh position={[0, -0.4, -11.05]}>
+        <boxGeometry args={[islandWidth, 0.1, 0.1]} />
+        <meshBasicMaterial color="#2563eb" />
+      </mesh>
+
+      {/* Decorative Trees along Lawn */}
+      {Array.from({ length: Math.ceil(islandWidth / 18) }).map((_, i) => {
+        const x = -islandWidth / 2 + i * 18 + 6;
+        return (
+          <group key={`tree-${i}`} position={[x, 0.05, -5]}>
+            <mesh position={[0, 1.0, 0]}>
+              <cylinderGeometry args={[0.2, 0.3, 2.0, 8]} />
+              <meshStandardMaterial color="#78350f" roughness={0.8} />
+            </mesh>
+            <mesh position={[0, 2.8, 0]}>
+              <sphereGeometry args={[1.4, 8, 8]} />
+              <meshStandardMaterial color="#15803d" roughness={0.7} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function FreeSpaceOrbitController({ targetX }) {
+  const { camera } = useThree();
+  const controlsRef = useRef();
+
+  useFrame((_, delta) => {
+    if (controlsRef.current) {
+      controlsRef.current.target.x = THREE.MathUtils.damp(controlsRef.current.target.x, targetX, 3.5, delta);
+      controlsRef.current.target.y = THREE.MathUtils.damp(controlsRef.current.target.y, 2.0, 3.5, delta);
+      controlsRef.current.target.z = THREE.MathUtils.damp(controlsRef.current.target.z, 0.0, 3.5, delta);
+
+      camera.position.x = THREE.MathUtils.damp(camera.position.x, targetX, 3.5, delta);
+      controlsRef.current.update();
     }
   });
 
-  const geometry = useMemo(() => {
-    switch (appliance.icon) {
-      case "tv": return <boxGeometry args={[0.04, 0.28, 0.42]} />;
-      case "fridge": return <boxGeometry args={[0.3, 0.55, 0.28]} />;
-      case "ac": return <boxGeometry args={[0.5, 0.12, 0.18]} />;
-      case "washer": return <cylinderGeometry args={[0.18, 0.18, 0.3, 16]} />;
-      case "oven": return <boxGeometry args={[0.32, 0.3, 0.3]} />;
-      case "light": return <sphereGeometry args={[0.08, 16, 16]} />;
-      default: return <boxGeometry args={[0.2, 0.2, 0.2]} />;
-    }
-  }, [appliance.icon]);
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enableRotate={true}
+      enablePan={true}
+      enableZoom={false}
+      rotateSpeed={1.0}
+      panSpeed={1.2}
+      minDistance={10}
+      maxDistance={80}
+    />
+  );
+}
 
-  const yOffset =
-    appliance.icon === "ac" ? 1.2 :
-    appliance.icon === "light" ? 1.4 :
-    appliance.icon === "fridge" ? 0.28 :
-    appliance.icon === "tv" ? 0.5 : 0.15;
+export default function House3D({ homes = [], activeHomeId, appliances = [], onSelectHome }) {
+  const containerRef = useRef(null);
+
+  // Enable smooth mouse wheel page scrolling over 3D canvas
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      const mainContent = document.querySelector(".app-main-content");
+      if (mainContent) {
+        mainContent.scrollBy({ top: e.deltaY * 1.5, behavior: "auto" });
+      }
+      window.scrollBy({ top: e.deltaY * 1.5, behavior: "auto" });
+    };
+    el.addEventListener("wheel", onWheel, { passive: true });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const targetHomes = Array.isArray(homes) && homes.length > 0
+    ? homes
+    : [{ id: "single-home", name: "Akıllı Konut", address: "İstanbul", usedKwh: 240, quotaKwh: 300, tariffState: "NORMAL", appliances }];
+
+  const homesCount = targetHomes.length;
+  const SPACING = 16;
+
+  const selectedIndex = useMemo(() => {
+    if (!activeHomeId) return 0;
+    const idx = targetHomes.findIndex((h) => h.id === activeHomeId);
+    return idx !== -1 ? idx : 0;
+  }, [activeHomeId, targetHomes]);
+
+  const targetX = (selectedIndex - (homesCount - 1) / 2) * SPACING;
 
   return (
-    <group position={[appliance.pos[0], yOffset, appliance.pos[2]]}>
-      <mesh
-        ref={ref}
-        onClick={(e) => { e.stopPropagation(); onSelect(appliance); }}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
+    <div className="house3d-canvas" ref={containerRef}>
+      <Canvas
+        shadows
+        camera={{ position: [targetX, 16.0, 32.0], fov: 38 }}
+        gl={{ antialias: true, alpha: true, outputColorSpace: THREE.SRGBColorSpace }}
       >
-        {geometry}
-        <meshPhysicalMaterial
-          color={color}
-          transparent
-          opacity={hovered ? 0.85 : 0.55}
-          roughness={0.15} metalness={0.1}
-          transmission={0.3} thickness={0.2}
-          emissive={color}
-          emissiveIntensity={status === "anomalous" ? 0.8 : hovered ? 0.5 : 0.3}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      <Html distanceFactor={7} center occlude={false}>
-        <button
-          className={`hotspot-label ${status}`}
-          onClick={() => onSelect(appliance)}
-          title={appliance.name}
-        >
-          {appliance.name}
-          <span className="hotspot-watt">{appliance.currentWatt}W</span>
-        </button>
-      </Html>
-    </group>
-  );
-}
-
-/* ─── Holographic floor with grid ─── */
-function HolographicFloor() {
-  return (
-    <group>
-      {/* Large circular ground */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
-        <circleGeometry args={[7, 64]} />
-        <meshStandardMaterial color="#0a1210" transparent opacity={0.5} roughness={0.95} />
-      </mesh>
-      {/* House floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-        <planeGeometry args={[4.5, 4.5]} />
-        <meshStandardMaterial color="#0d1520" transparent opacity={0.8} roughness={0.95} />
-      </mesh>
-      {/* Grid lines X */}
-      {Array.from({ length: 11 }).map((_, i) => (
-        <mesh key={`gx-${i}`} position={[-2.25 + i * 0.45, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.008, 4.5]} />
-          <meshBasicMaterial color="#7c9eff" transparent opacity={0.1} />
-        </mesh>
-      ))}
-      {/* Grid lines Z */}
-      {Array.from({ length: 11 }).map((_, i) => (
-        <mesh key={`gz-${i}`} position={[0, 0.002, -2.25 + i * 0.45]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[4.5, 0.008]} />
-          <meshBasicMaterial color="#7c9eff" transparent opacity={0.1} />
-        </mesh>
-      ))}
-      {/* Room dividers (brighter) */}
-      <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[0.02, 4.3]} />
-        <meshBasicMaterial color="#7c9eff" transparent opacity={0.3} />
-      </mesh>
-      <mesh position={[0, 0.006, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[4.3, 0.02]} />
-        <meshBasicMaterial color="#7c9eff" transparent opacity={0.3} />
-      </mesh>
-    </group>
-  );
-}
-
-/* ─── Glass walls + roof ─── */
-function GlassWalls() {
-  return (
-    <group>
-      {/* Outer glass shell */}
-      <mesh position={[0, 0.9, 0]}>
-        <boxGeometry args={[4.3, 1.8, 4.3]} />
-        <meshPhysicalMaterial
-          color="#a0c4ff" transparent opacity={0.06}
-          roughness={0.05} metalness={0.05}
-          transmission={0.92} thickness={0.3}
-          side={THREE.BackSide}
-        />
-      </mesh>
-      {/* Room divider X */}
-      <mesh position={[0, 0.9, 0]}>
-        <boxGeometry args={[0.02, 1.6, 4.2]} />
-        <meshPhysicalMaterial color="#8fb0ff" transparent opacity={0.05} roughness={0.1} transmission={0.9} thickness={0.1} side={THREE.DoubleSide} />
-      </mesh>
-      {/* Room divider Z */}
-      <mesh position={[0, 0.9, 0]}>
-        <boxGeometry args={[4.2, 1.6, 0.02]} />
-        <meshPhysicalMaterial color="#8fb0ff" transparent opacity={0.05} roughness={0.1} transmission={0.9} thickness={0.1} side={THREE.DoubleSide} />
-      </mesh>
-      {/* Glass Roof */}
-      <mesh position={[0, 2.05, 0]} rotation={[0, Math.PI / 4, 0]}>
-        <coneGeometry args={[3.3, 1.1, 4]} />
-        <meshPhysicalMaterial color="#b0c8ff" transparent opacity={0.08} roughness={0.1} transmission={0.85} thickness={0.2} side={THREE.DoubleSide} />
-      </mesh>
-      {/* Edge glow at base */}
-      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[2.9, 3.05, 4]} />
-        <meshBasicMaterial color="#7c9eff" transparent opacity={0.08} side={THREE.DoubleSide} />
-      </mesh>
-    </group>
-  );
-}
-
-/* ─── Room labels ─── */
-function RoomLabels() {
-  const rooms = [
-    { name: "Oturma Odası", pos: [-1.05, 0.05, 1.05] },
-    { name: "Mutfak", pos: [1.05, 0.05, 1.05] },
-    { name: "Yatak Odası", pos: [-1.05, 0.05, -1.05] },
-    { name: "Banyo", pos: [1.05, 0.05, -1.05] },
-  ];
-  return rooms.map((room) => (
-    <Html key={room.name} position={room.pos} distanceFactor={10} center>
-      <span className="room-label mono">{room.name}</span>
-    </Html>
-  ));
-}
-
-/* ─── Garden: trees, pathway, fence ─── */
-function Tree({ position, scale = 1 }) {
-  return (
-    <group position={position} scale={scale}>
-      {/* Trunk */}
-      <mesh position={[0, 0.35, 0]}>
-        <cylinderGeometry args={[0.05, 0.07, 0.7, 8]} />
-        <meshStandardMaterial color="#3a5435" transparent opacity={0.6} />
-      </mesh>
-      {/* Canopy - wireframe sphere for holographic feel */}
-      <mesh position={[0, 0.95, 0]}>
-        <sphereGeometry args={[0.4, 8, 8]} />
-        <meshStandardMaterial
-          color="#3ddc97" transparent opacity={0.12}
-          emissive="#3ddc97" emissiveIntensity={0.15}
-          wireframe
-        />
-      </mesh>
-      {/* Canopy solid glow */}
-      <mesh position={[0, 0.95, 0]}>
-        <sphereGeometry args={[0.35, 8, 8]} />
-        <meshStandardMaterial
-          color="#3ddc97" transparent opacity={0.06}
-          emissive="#3ddc97" emissiveIntensity={0.2}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-function Garden() {
-  return (
-    <group>
-      {/* Trees around the house */}
-      <Tree position={[-3.8, 0, -3.2]} scale={1.1} />
-      <Tree position={[3.5, 0, -2.8]} scale={0.9} />
-      <Tree position={[-3.2, 0, 3.5]} scale={1.0} />
-      <Tree position={[3.8, 0, 3.3]} scale={1.2} />
-      <Tree position={[0, 0, -4.2]} scale={0.85} />
-      <Tree position={[-4.5, 0, 0]} scale={0.95} />
-      <Tree position={[4.3, 0, 0.5]} scale={1.05} />
-
-      {/* Pathway to house entrance */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 3.8]}>
-        <planeGeometry args={[0.7, 3.2]} />
-        <meshStandardMaterial color="#1a2a1a" transparent opacity={0.4} roughness={0.9} />
-      </mesh>
-      {/* Pathway glow lines */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.35, 0.004, 3.8]}>
-        <planeGeometry args={[0.01, 3.2]} />
-        <meshBasicMaterial color="#3ddc97" transparent opacity={0.18} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.35, 0.004, 3.8]}>
-        <planeGeometry args={[0.01, 3.2]} />
-        <meshBasicMaterial color="#3ddc97" transparent opacity={0.18} />
-      </mesh>
-
-      {/* Fence posts around garden perimeter */}
-      {[
-        [-5, 0, -5], [-5, 0, -2.5], [-5, 0, 0], [-5, 0, 2.5], [-5, 0, 5],
-        [5, 0, -5], [5, 0, -2.5], [5, 0, 0], [5, 0, 2.5], [5, 0, 5],
-        [-2.5, 0, -5], [0, 0, -5], [2.5, 0, -5],
-        [-2.5, 0, 5], [2.5, 0, 5],
-      ].map((pos, i) => (
-        <mesh key={`fp-${i}`} position={[pos[0], 0.2, pos[2]]}>
-          <cylinderGeometry args={[0.02, 0.02, 0.4, 6]} />
-          <meshStandardMaterial color="#7c9eff" transparent opacity={0.2} emissive="#7c9eff" emissiveIntensity={0.15} />
-        </mesh>
-      ))}
-
-      {/* Fence rails */}
-      {[
-        { pos: [-5, 0.25, 0], args: [0.01, 0.01, 10] },
-        { pos: [5, 0.25, 0], args: [0.01, 0.01, 10] },
-        { pos: [0, 0.25, -5], args: [10, 0.01, 0.01] },
-        { pos: [0, 0.25, 5], args: [4.3, 0.01, 0.01] },
-      ].map((rail, i) => (
-        <mesh key={`fr-${i}`} position={rail.pos}>
-          <boxGeometry args={rail.args} />
-          <meshBasicMaterial color="#7c9eff" transparent opacity={0.12} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-/* ─── Room furniture for additional detail ─── */
-function RoomFurniture() {
-  return (
-    <group>
-      {/* Oturma Odası — rug */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-1.05, 0.003, 1.05]}>
-        <planeGeometry args={[1.6, 1.4]} />
-        <meshStandardMaterial color="#2a2040" transparent opacity={0.25} roughness={0.95} />
-      </mesh>
-      {/* Mutfak — counter L-shape */}
-      <mesh position={[1.8, 0.3, 1.05]}>
-        <boxGeometry args={[0.5, 0.04, 1.4]} />
-        <meshStandardMaterial color="#38bdf8" transparent opacity={0.15} emissive="#38bdf8" emissiveIntensity={0.1} />
-      </mesh>
-      {/* Yatak Odası — wardrobe */}
-      <mesh position={[-1.85, 0.45, -1.05]}>
-        <boxGeometry args={[0.25, 0.9, 0.5]} />
-        <meshStandardMaterial color="#a78bfa" transparent opacity={0.12} emissive="#a78bfa" emissiveIntensity={0.1} />
-      </mesh>
-      {/* Yatak Odası — nightstand */}
-      <mesh position={[-0.55, 0.12, -1.4]}>
-        <boxGeometry args={[0.15, 0.24, 0.15]} />
-        <meshStandardMaterial color="#ff8a5c" transparent opacity={0.15} emissive="#ff8a5c" emissiveIntensity={0.1} />
-      </mesh>
-      {/* Banyo — sink */}
-      <mesh position={[1.6, 0.35, -1.05]}>
-        <boxGeometry args={[0.25, 0.04, 0.35]} />
-        <meshStandardMaterial color="#38bdf8" transparent opacity={0.18} emissive="#38bdf8" emissiveIntensity={0.15} />
-      </mesh>
-      {/* Banyo — toilet */}
-      <mesh position={[1.05, 0.12, -1.6]}>
-        <boxGeometry args={[0.2, 0.24, 0.2]} />
-        <meshStandardMaterial color="#e2e8f0" transparent opacity={0.1} emissive="#e2e8f0" emissiveIntensity={0.08} />
-      </mesh>
-    </group>
-  );
-}
-
-export default function House3D({ appliances, onSelectAppliance }) {
-  const positioned = useMemo(() => layoutAppliances(appliances.filter((a) => a.in3D !== false)), [appliances]);
-  const [autoRotate, setAutoRotate] = useState(true);
-
-  return (
-    <div className="house3d-canvas">
-      <Canvas shadows camera={{ position: [5.5, 4, 5.5], fov: 38 }}>
         <Suspense fallback={null}>
-          <ambientLight intensity={0.35} />
-          <directionalLight position={[4, 6, 3]} intensity={0.9} castShadow />
-          <pointLight position={[-3, 2, -3]} intensity={20} color="#7c9eff" />
-          <pointLight position={[3, 1, 3]} intensity={10} color="#3ddc97" />
-          <pointLight position={[0, 3, 0]} intensity={8} color="#ffc93c" />
-          <HolographicFloor />
-          <GlassWalls />
-          <RoomLabels />
-          <RoomFurniture />
-          <Garden />
-          {positioned.map((a) => (
-            <ApplianceModel key={a.id} appliance={a} onSelect={onSelectAppliance} />
-          ))}
-          <ContactShadows position={[0, 0, 0]} opacity={0.2} scale={14} blur={3} far={3} />
-          <OrbitControls
-            enablePan={false}
-            minDistance={4}
-            maxDistance={14}
-            maxPolarAngle={Math.PI / 2.05}
-            autoRotate={autoRotate}
-            autoRotateSpeed={0.5}
-            onStart={() => setAutoRotate(false)}
-          />
+          <ambientLight color="#ffffff" intensity={1.9} />
+          <hemisphereLight skyColor="#38bdf8" groundColor="#0f172a" intensity={1.3} />
+          <directionalLight position={[25, 40, 20]} color="#fffbeb" intensity={2.6} castShadow shadow-mapSize={[1024, 1024]} />
+          <directionalLight position={[-20, 25, -15]} color="#93c5fd" intensity={1.4} />
+
+          <FloatingDioramaIsland count={homesCount} />
+
+          {targetHomes.map((home, index) => {
+            const xPos = (index - (homesCount - 1) / 2) * SPACING;
+            const isSelected = activeHomeId === home.id || (activeHomeId === null && selectedIndex === index);
+
+            return (
+              <GLTFErrorBoundary
+                key={home.id || index}
+                fallback={
+                  <ProceduralHouseInstance
+                    position={[xPos, 0, -0.2]}
+                    home={home}
+                    isSelected={isSelected}
+                    onSelect={onSelectHome}
+                  />
+                }
+              >
+                <ModernVillaInstance
+                  position={[xPos, 0, -0.2]}
+                  home={home}
+                  isSelected={isSelected}
+                  onSelect={onSelectHome}
+                />
+              </GLTFErrorBoundary>
+            );
+          })}
+
+          <ContactShadows position={[0, -0.41, 0]} opacity={0.4} scale={SPACING * homesCount} blur={2.5} far={8} />
+          <FreeSpaceOrbitController targetX={targetX} />
         </Suspense>
       </Canvas>
-      <div className="house3d-hint mono">sürükle · 360° döndür · scroll · yakınlaş</div>
     </div>
   );
 }

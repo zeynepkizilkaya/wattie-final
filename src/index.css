@@ -1,23 +1,31 @@
-:root {
+:root, [data-theme="dark"] {
   --void: #0a0d13;
   --void-deep: #05070a;
-  --panel: rgba(20, 25, 36, 0.58);
+  --surface: #0f1219;
+  --panel: rgba(20, 25, 36, 0.75);
   --panel-solid: #141926;
   --panel-border: rgba(255, 255, 255, 0.08);
   --grid-line: rgba(124, 158, 255, 0.06);
 
   --volt: #ffc93c;
-  --volt-dim: #a9812a;
+  --volt-dim: rgba(255, 201, 60, 0.15);
   --current: #3ddc97;
-  --current-dim: #2a8f65;
+  --current-dim: rgba(61, 220, 151, 0.15);
   --danger: #ff4757;
-  --danger-dim: #a6303e;
+  --danger-dim: rgba(255, 71, 87, 0.15);
   --arc: #7c9eff;
-  --arc-dim: #4a5fa8;
+  --arc-dim: rgba(124, 158, 255, 0.15);
 
-  --text-1: #edeff4;
-  --text-2: #aeb4c2;
-  --text-3: #6c7486;
+  --clr-warning: #ffb717;
+  --clr-warning-dim: rgba(255, 183, 23, 0.15);
+
+  --sidebar-width: 260px;
+  --sidebar-collapsed: 72px;
+  --header-height: 64px;
+
+  --text-1: #f8fafc;
+  --text-2: #94a3b8;
+  --text-3: #64748b;
 
   --font-display: "Space Grotesk", "Inter", sans-serif;
   --font-body: "Inter", sans-serif;
@@ -30,31 +38,66 @@
   color-scheme: dark;
 }
 
+[data-theme="light"] {
+  --void: #f1f5f9;
+  --void-deep: #e2e8f0;
+  --surface: #ffffff;
+  --panel: #ffffff;
+  --panel-solid: #ffffff;
+  --panel-border: #cbd5e1;
+  --grid-line: rgba(37, 99, 235, 0.06);
+
+  --volt: #d97706;
+  --volt-dim: rgba(217, 119, 6, 0.12);
+  --current: #16a34a;
+  --current-dim: rgba(22, 163, 74, 0.12);
+  --danger: #dc2626;
+  --danger-dim: rgba(220, 38, 38, 0.12);
+  --arc: #2563eb;
+  --arc-dim: rgba(37, 99, 235, 0.12);
+
+  --clr-warning: #d97706;
+  --clr-warning-dim: rgba(217, 119, 6, 0.12);
+
+  --text-1: #0f172a; /* Ultra readable deep slate navy */
+  --text-2: #334155; /* Dark slate secondary */
+  --text-3: #64748b; /* Muted slate */
+
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
 }
 
-html, body, #root {
-  height: 100%;
-}
-
-body {
+html, body {
+  min-height: 100vh;
+  height: auto;
   margin: 0;
+  padding: 0;
   background: var(--void);
   color: var(--text-1);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
-h1, h2, h3, h4 {
+#root {
+  min-height: 100vh;
+  height: auto;
+}
+
+h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
+  color: var(--text-1);
   margin: 0;
   letter-spacing: -0.01em;
 }
 
-p {
-  margin: 0;
+p, span, label, td, th {
+  color: inherit;
 }
 
 button {
@@ -62,7 +105,7 @@ button {
   cursor: pointer;
 }
 
-input {
+input, select, textarea {
   font-family: var(--font-body);
 }
 
@@ -73,6 +116,7 @@ input {
 
 ::-webkit-scrollbar {
   width: 10px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -93,8 +137,7 @@ input {
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-md);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .circuit-bg {
@@ -125,4 +168,47 @@ input {
 :focus-visible {
   outline: 2px solid var(--volt);
   outline-offset: 2px;
+}
+
+/* Global Button Styles */
+.btn-primary {
+  background: linear-gradient(135deg, var(--volt), #f59e0b);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--text-1);
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 12.5px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--arc-dim);
+  border-color: var(--arc);
+  color: var(--arc);
 }
