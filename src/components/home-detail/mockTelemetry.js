@@ -106,5 +106,32 @@ export const MOCK_TELEMETRY = {
       { time: '18:00', value: 80 },
       { time: '20:00', value: 50 }
     ],
+  },
+  lights: {
+    id: 'lights',
+    name: 'Genel Aydınlatma',
+    room: 'Salon',
+    status: 'online',
+    lastUpdated: '2 dakika önce',
+    currentPower: 28,
+    todayConsumption: 0.62,
+    monthlyConsumption: 18.6,
+    estimatedCost: 8.8,
+    efficiencyRating: 'A+++',
+    peakTime: '18:00 - 23:00',
+    aiRecommendation: 'LED optimizasyonu: Mevcut aydınlatma seviyesi optimal. Gece 23:00 sonrası %50 kısma ile aylık 3W tasarruf sağlanabilir.',
+    healthScore: 100,
+    temperature: 28,
+    anomalies: [],
+    maintenancePrediction: 'LED ömrü tahminen 5+ yıl',
+    historyData: [
+      { time: '08:00', value: 10 },
+      { time: '10:00', value: 18 },
+      { time: '12:00', value: 15 },
+      { time: '14:00', value: 12 },
+      { time: '16:00', value: 20 },
+      { time: '18:00', value: 28 },
+      { time: '20:00', value: 28 }
+    ],
   }
 };

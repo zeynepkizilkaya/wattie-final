@@ -2,8 +2,6 @@ import { useState, useRef, useMemo, useEffect, useCallback, Suspense, Component 
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
-  ChevronUp,
-  ChevronDown,
   LineChart,
   Sun,
   Clock,
@@ -398,6 +396,19 @@ export function HousePage() {
   const [activeDeviceId, setActiveDeviceId] = useState(null);
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
+  const canvasWrapperRef = useRef(null);
+
+  // Forward wheel events from 3D canvas to page scroll so OrbitControls
+  // doesn't swallow them. Passive listener so it doesn't block OrbitControls.
+  useEffect(() => {
+    const el = canvasWrapperRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      window.scrollBy({ top: e.deltaY, behavior: "auto" });
+    };
+    el.addEventListener("wheel", onWheel, { passive: true });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   // Live telemetry state
   const [deviceStates, setDeviceStates] = useState(() => {
@@ -1247,6 +1258,7 @@ export function HousePage() {
           </div>
 
           <div
+            ref={canvasWrapperRef}
             style={{
               position: "absolute",
               top: 0,
@@ -1258,22 +1270,24 @@ export function HousePage() {
           >
             <Canvas
               shadows
-              camera={{ position: [0.01, 10.5, 9.5], fov: 40 }}
+              camera={{ position: [8, 5, 8], fov: 40 }}
               gl={{
                 antialias: true,
-                alpha: true,
-                outputColorSpace: THREE.SRGBColorSpace,
                 toneMapping: THREE.ACESFilmicToneMapping,
                 toneMappingExposure: 1.2,
               }}
             >
+              <color attach="background" args={["#06101b"]} />
+              <ambientLight intensity={0.4} color="#8ba0c3" />
+              <directionalLight
+                position={[5, 10, 5]}
+                intensity={1.5}
+                color="#7ea2d5"
+                castShadow
+                shadow-mapSize={[1024, 1024]}
+              />
               <Suspense fallback={null}>
-                <color attach="background" args={["#06101b"]} />
-                <ambientLight intensity={1.3} color="#8ba0c3" />
-                <hemisphereLight skyColor="#38bdf8" groundColor="#0f172a" intensity={1.6} />
-                <directionalLight position={[12, 22, 12]} intensity={2.4} color="#ffffff" castShadow shadow-mapSize={[1024, 1024]} />
-                <pointLight position={[-6, 10, -6]} intensity={1.5} color="#818cf8" />
-
+                <Environment preset="city" />
                 <GLTFErrorBoundary fallback={<FallbackRoomFloor />}>
                   <InteriorModel
                     position={[0, -1.8, 0]}
@@ -1332,148 +1346,6 @@ export function HousePage() {
         ))}
       </footer>
 
-      {/* Bottom Analytics Section */}
-      <section
-        style={{
-          width: "100%",
-          maxWidth: "none",
-          margin: "1.5rem 0 3rem",
-          display: "grid",
-          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-          gap: "1.5rem",
-          padding: "0 0.5rem",
-          boxSizing: "border-box",
-          gridColumn: 3,
-          gridRow: 5,
-        }}
-      >
-        {/* Energy Trend Card */}
-        <div
-          style={{
-            background: "rgba(6, 16, 27, 0.45)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "16px",
-            padding: "1.5rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1rem",
-            boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
-            boxSizing: "border-box",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "0.85rem",
-              fontWeight: 700,
-              color: "rgba(255, 255, 255, 0.7)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-              paddingBottom: "0.65rem",
-            }}
-          >
-            <LineChart size={16} color="#38bdf8" />
-            <span>Energy Trend (Today)</span>
-          </div>
-
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "120px" }}>
-            <svg viewBox="0 0 300 100" width="100%" height="120" style={{ overflow: "visible" }}>
-              <defs>
-                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <line x1="0" y1="20" x2="300" y2="20" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-              <line x1="0" y1="50" x2="300" y2="50" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-              <line x1="0" y1="80" x2="300" y2="80" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-              <path d="M 0 90 Q 30 85, 60 80 T 120 65 T 180 35 T 240 55 T 300 25 L 300 100 L 0 100 Z" fill="url(#chartGrad)" />
-              <motion.path
-                d="M 0 90 Q 30 85, 60 80 T 120 65 T 180 35 T 240 55 T 300 25"
-                fill="none"
-                stroke="#38bdf8"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-              />
-              <circle cx="180" cy="35" r="4" fill="#38bdf8" />
-              <circle cx="180" cy="35" r="8" fill="none" stroke="#38bdf8" strokeWidth="1.5" opacity="0.5" />
-            </svg>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "rgba(255, 255, 255, 0.4)", fontWeight: 600 }}>
-            <span>00:00</span>
-            <span>06:00</span>
-            <span>12:00</span>
-            <span>18:00</span>
-            <span>24:00</span>
-          </div>
-        </div>
-
-        {/* Top Consumers Card */}
-        <div
-          style={{
-            background: "rgba(6, 16, 27, 0.45)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "16px",
-            padding: "1.5rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1rem",
-            boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
-            boxSizing: "border-box",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "0.85rem",
-              fontWeight: 700,
-              color: "rgba(255, 255, 255, 0.7)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-              paddingBottom: "0.65rem",
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="20" x2="18" y2="10" />
-              <line x1="12" y1="20" x2="12" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="14" />
-            </svg>
-            <span>Top Consumers</span>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", flex: 1, justifyContent: "center" }}>
-            {consumers.map((c) => (
-              <div key={c.name} style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", fontWeight: 600 }}>
-                  <span style={{ color: "#fff" }}>{c.name}</span>
-                  <span style={{ color: c.color, fontFamily: "monospace", fontWeight: 700 }}>{c.power} W</span>
-                </div>
-                <div style={{ height: "6px", background: "rgba(255, 255, 255, 0.04)", borderRadius: "3px", overflow: "hidden" }}>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(c.power / 150) * 100}%` }}
-                    transition={{ duration: 1.2, ease: "easeOut" }}
-                    style={{ height: "100%", background: c.color, borderRadius: "3px" }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       <AnimatePresence>
         {activeDeviceId && (

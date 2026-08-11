@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
-import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
+import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 export function DancingDino() {
   const group = useRef(null);
@@ -11,18 +11,20 @@ export function DancingDino() {
 
   // Clone with SkeletonUtils to preserve bone bindings for rigged meshes
   const centeredScene = useMemo(() => {
-    const clone = SkeletonUtils.clone(scene);
-    const box = new THREE.Box3().setFromObject(clone);
+    if (!scene) return null;
+    const cloned = clone(scene);
+    const box = new THREE.Box3().setFromObject(cloned);
     const center = new THREE.Vector3();
     box.getCenter(center);
 
     // Shift root so geometry is centered horizontally and stands on Y=0
-    clone.position.set(-center.x, -box.min.y, -center.z);
-    return clone;
+    cloned.position.set(-center.x, -box.min.y, -center.z);
+    return cloned;
   }, [scene]);
 
   // Enable shadows and disable frustum culling for all child meshes
   useEffect(() => {
+    if (!centeredScene) return;
     centeredScene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.castShadow = true;
@@ -34,6 +36,7 @@ export function DancingDino() {
 
   // Auto-play the dance animation on loop
   useEffect(() => {
+    if (!actions) return;
     const firstAction = Object.values(actions)[0];
     if (firstAction) {
       firstAction.reset().fadeIn(0.5).play();
@@ -42,6 +45,8 @@ export function DancingDino() {
       if (firstAction) firstAction.fadeOut(0.5);
     };
   }, [actions]);
+
+  if (!centeredScene) return null;
 
   return (
     <group
