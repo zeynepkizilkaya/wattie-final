@@ -22,14 +22,10 @@ React 19 · Vite · React Router · Zustand · Three.js · React Three Fiber · 
 Spring Boot · Apache Kafka · Apache Ignite · PostgreSQL · Redis · Google Gemini
 
 ## Architecture
-IoT / Simulated Devices
-↓
-Kafka
-↓
-Spring Boot
-↓
-Ignite + PostgreSQL
-↓
+IoT / Simulated Devices, 
+Kafka, 
+Spring Boot, 
+Ignite + PostgreSQL, 
 React Frontend
 
 The frontend currently supports mock telemetry data for standalone demonstration and testing.
