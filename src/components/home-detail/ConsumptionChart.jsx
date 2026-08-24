@@ -27,7 +27,17 @@ export default function ConsumptionChart({ data }) {
           <XAxis dataKey="date" tick={{ fill: "#6c7486", fontSize: 11 }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fill: "#6c7486", fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
           <Tooltip content={<CustomTooltip />} />
-          <Area type="monotone" dataKey="kwh" stroke="#7c9eff" strokeWidth={2} fill="url(#voltGradient)" />
+          <Area
+            type="monotone"
+            dataKey="totalKwh"
+            stroke="#0f62fe"
+            fill="#0f62fe"
+            fillOpacity={0.08}
+            strokeWidth={2}
+            name="Tüketim (kWh)"
+            dot={{ r: 5 }}
+            activeDot={{ r: 7 }}
+          />
         </AreaChart>
       </ResponsiveContainer>
     </div>

@@ -22,66 +22,181 @@ export default function HomeDetailPage() {
 
   const [home, setHome] = useState(null);
   const [history, setHistory] = useState(null);
+  const [advisories, setAdvisories] = useState([]);
   const [loadError, setLoadError] = useState("");
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [requestingAdv, setRequestingAdv] = useState(false);
-  const [viewMode, setViewMode] = useState("3d"); // "3d" or "floorplan"
+  const [viewMode, setViewMode] = useState("3d");
   const [selectedFloor, setSelectedFloor] = useState("all");
 
-  const fetchHome = useCallback(async (silent) => {
+  const loadAdvisories = useCallback(async () => {
     try {
-      const data = await api.getHomeDetail(targetHomeId);
-      setHome(data);
-      setLoadError("");
+      const events = await api.getHomeEvents(targetHomeId);
+
+      if (!Array.isArray(events)) {
+        setAdvisories([]);
+        return;
+      }
+
+      const mappedAdvisories = events
+        .filter((event) => event.aiRecommendation)
+        .map((event, index) => {
+          let triggeredBy = "DEVICE_ANOMALY";
+
+          if (
+            event.eventType === "QUOTA_BREACH_80" ||
+            event.eventType === "QUOTA_WARNING"
+          ) {
+            triggeredBy = "QUOTA_BREACH_80";
+          } else if (
+            event.eventType === "QUOTA_BREACH_100" ||
+            event.eventType === "PENALTY_ACTIVATED"
+          ) {
+            triggeredBy = "QUOTA_BREACH_100";
+          }
+
+          return {
+            id: event.id ?? `event-${targetHomeId}-${index}`,
+            homeId: String(targetHomeId),
+            homeName: event.home?.name || "",
+            triggeredBy,
+            createdAt: event.createdAt || new Date().toISOString(),
+            subject:
+              event.subject ||
+              (event.eventType === "ANOMALY_DETECTED"
+                ? "Cihaz Tüketim Anomalisi"
+                : "AI Enerji Tasarruf Önerisi"),
+            body: event.aiRecommendation,
+          };
+        });
+
+      setAdvisories(mappedAdvisories);
     } catch (err) {
-      if (!silent) setLoadError(err instanceof ApiError ? err.message : "Konut yüklenemedi.");
+      console.error("AI önerileri alınamadı:", err);
+      setAdvisories([]);
     }
   }, [targetHomeId]);
 
+  const fetchHome = useCallback(
+    async (silent) => {
+      try {
+        const data = await api.getHomeDetail(targetHomeId);
+
+        setHome(data);
+        setLoadError("");
+
+        // AI önerilerini gerçek backend eventlerinden al.
+        await loadAdvisories();
+      } catch (err) {
+        if (!silent) {
+          setLoadError(
+            err instanceof ApiError
+              ? err.message
+              : "Konut yüklenemedi."
+          );
+        }
+      }
+    },
+    [targetHomeId, loadAdvisories]
+  );
+
   useEffect(() => {
     fetchHome(false);
-    api.getHomeHistory(targetHomeId).then(setHistory).catch(() => {});
-    const id = setInterval(() => fetchHome(true), POLL_MS);
+
+    api
+      .getHomeHistory(targetHomeId)
+      .then(setHistory)
+      .catch((err) => {
+        console.error("Tüketim geçmişi alınamadı:", err);
+      });
+
+    const id = setInterval(() => {
+      fetchHome(true);
+    }, POLL_MS);
+
     return () => clearInterval(id);
   }, [fetchHome, targetHomeId]);
 
   async function handleAddAppliance(payload) {
     setSubmitting(true);
+
     try {
       await api.addAppliance(targetHomeId, payload);
       await fetchHome(true);
+
       setModalOpen(false);
+
       pushToast(`${payload.name} eklendi.`, "success");
     } catch (err) {
-      pushToast(err instanceof ApiError ? err.message : "Eşya eklenemedi.", "error");
+      pushToast(
+        err instanceof ApiError
+          ? err.message
+          : "Eşya eklenemedi.",
+        "error"
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDeleteAppliance(appliance) {
-    const confirmed = window.confirm(`${appliance.name} (${appliance.room}) silinsin mi?`);
+    const confirmed = window.confirm(
+      `${appliance.name} (${appliance.room}) silinsin mi?`
+    );
+
     if (!confirmed) return;
+
     try {
-      await api.deleteAppliance(targetHomeId, appliance.id);
+      await api.deleteAppliance(
+        targetHomeId,
+        appliance.id
+      );
+
       await fetchHome(true);
-      if (selectedGroup === appliance.name) setSelectedGroup(null);
-      pushToast(`${appliance.name} silindi.`, "info");
+
+      if (selectedGroup === appliance.name) {
+        setSelectedGroup(null);
+      }
+
+      pushToast(
+        `${appliance.name} silindi.`,
+        "info"
+      );
     } catch (err) {
-      pushToast(err instanceof ApiError ? err.message : "Eşya silindi.", "error");
+      pushToast(
+        err instanceof ApiError
+          ? err.message
+          : "Eşya silinemedi.",
+        "error"
+      );
     }
   }
 
   async function handleRequestAdvisory() {
     try {
       setRequestingAdv(true);
+
       await api.fetchAdvisory(targetHomeId);
-      await fetchHome(true);
-      pushToast("YENİ AI ÖNERİSİ OLUŞTURULDU", "success");
+
+      // Backend yeni event/AI recommendation oluşturduktan
+      // sonra gerçek event listesini tekrar çek.
+      await loadAdvisories();
+
+      pushToast(
+        "YENİ AI ÖNERİSİ OLUŞTURULDU",
+        "success"
+      );
     } catch (err) {
-      pushToast(err instanceof ApiError ? err.message : "Öneri oluşturulamadı.", "error");
+      console.error("AI önerisi oluşturulamadı:", err);
+
+      pushToast(
+        err instanceof ApiError
+          ? err.message
+          : "Öneri oluşturulamadı.",
+        "error"
+      );
     } finally {
       setRequestingAdv(false);
     }
@@ -91,209 +206,421 @@ export default function HomeDetailPage() {
     return (
       <div className="home-detail-error">
         <p>{loadError}</p>
-        <button className="btn-ghost" onClick={() => navigate("/dashboard")}>← Panele dön</button>
+
+        <button
+          className="btn-ghost"
+          onClick={() => navigate("/dashboard")}
+        >
+          ← Panele dön
+        </button>
       </div>
     );
   }
 
   if (!home) {
-    return <div className="home-detail-loading mono">Konut verisi yükleniyor…</div>;
+    return (
+      <div className="home-detail-loading mono">
+        Konut verisi yükleniyor…
+      </div>
+    );
   }
 
-  const quotaPct = Math.min(100, Math.round((home.usedKwh / home.quotaKwh) * 100));
-  const isPenalty = home.tariffState === "PENALTY" || quotaPct >= 100;
-  const isWarning = home.tariffState === "WARNING" || (quotaPct >= 80 && !isPenalty);
+  const quotaPct =
+    home.quotaKwh > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (home.usedKwh / home.quotaKwh) * 100
+          )
+        )
+      : 0;
 
-  // Group appliances by room floor
+  const isPenalty =
+    home.tariffState === "PENALTY" ||
+    quotaPct >= 100;
+
+  const isWarning =
+    home.tariffState === "WARNING" ||
+    (quotaPct >= 80 && !isPenalty);
+
+  // Group appliances by room
   const roomsMap = {};
+
   if (home.appliances) {
     home.appliances.forEach((a) => {
-      if (!roomsMap[a.room]) roomsMap[a.room] = [];
-      roomsMap[a.room].push(a);
+      const roomName = a.room || "Diğer";
+
+      if (!roomsMap[roomName]) {
+        roomsMap[roomName] = [];
+      }
+
+      roomsMap[roomName].push(a);
     });
   }
 
   return (
     <div className="home-detail-page">
+
       {/* Breadcrumb */}
       <div className="detail-breadcrumb mono">
-        <Link to="/dashboard">Dashboard</Link>
+        <Link to="/dashboard">
+          Dashboard
+        </Link>
+
         <span>/</span>
-        <span className="current-page">{home.name}</span>
+
+        <span className="current-page">
+          {home.name}
+        </span>
       </div>
 
       {/* Header Bar */}
       <header className="home-detail-header">
-        <button className="btn-ghost" onClick={() => navigate("/dashboard")}>← Panele dön</button>
+
+        <button
+          className="btn-ghost"
+          onClick={() => navigate("/dashboard")}
+        >
+          ← Panele dön
+        </button>
+
         <div className="home-detail-title">
           <h1>{home.name}</h1>
-          <span className="mono muted">{home.address} · {home.ownerName}</span>
+
+          <span className="mono muted">
+            {home.address} · {home.ownerName}
+          </span>
         </div>
 
-        {/* View Switcher: 3D Tek Ev Görünümü vs Oda Bazlı Tablo vs 3D Kat Planı */}
+        {/* View Switcher */}
         <div className="view-mode-toggle glass-panel">
+
           <button
             type="button"
-            className={`toggle-btn ${viewMode === "3d" ? "active" : ""}`}
+            className={`toggle-btn ${
+              viewMode === "3d" ? "active" : ""
+            }`}
             onClick={() => setViewMode("3d")}
           >
             3D Tek Ev Görünümü
           </button>
+
           <button
             type="button"
             className="toggle-btn"
-            style={{ color: "var(--volt)", borderColor: "var(--volt)" }}
-            onClick={() => navigate(`/house/${targetHomeId}`)}
+            style={{
+              color: "var(--volt)",
+              borderColor: "var(--volt)",
+            }}
+            onClick={() =>
+              navigate(`/house/${targetHomeId}`)
+            }
           >
             🏢 3D Kat Planını Aç →
           </button>
+
           <button
             type="button"
-            className={`toggle-btn ${viewMode === "floorplan" ? "active" : ""}`}
-            onClick={() => setViewMode("floorplan")}
+            className={`toggle-btn ${
+              viewMode === "floorplan"
+                ? "active"
+                : ""
+            }`}
+            onClick={() =>
+              setViewMode("floorplan")
+            }
           >
             Oda Bazlı Tablo
           </button>
+
         </div>
 
-        <span className={`tariff-pill ${isPenalty ? "danger" : isWarning ? "warning" : "normal"}`}>
-          {isPenalty ? "Ceza Tarifesi" : isWarning ? "%80 Kota Uyarısı" : "Normal Tarife"}
+        <span
+          className={`tariff-pill ${
+            isPenalty
+              ? "danger"
+              : isWarning
+              ? "warning"
+              : "normal"
+          }`}
+        >
+          {isPenalty
+            ? "Ceza Tarifesi"
+            : isWarning
+            ? "%80 Kota Uyarısı"
+            : "Normal Tarife"}
         </span>
+
       </header>
 
       {/* Main Body */}
       <div className="home-detail-body">
+
         <div className="home-detail-viewer">
+
           {viewMode === "3d" ? (
-            /* Single House 3D View (Clicking opens 3D floor plan) */
+
             <House3D
               homes={[home]}
               activeHomeId={home.id}
               appliances={home.appliances}
-              onSelectHome={() => navigate(`/house/${targetHomeId}`)}
+              onSelectHome={() =>
+                navigate(`/house/${targetHomeId}`)
+              }
             />
+
           ) : (
-            /* Interactive Oda Bazlı Tablo View */
+
             <div className="floorplan-view-container">
+
               <div className="floorplan-header">
+
                 <div>
-                  <h3>Kat & Oda Bazlı Tüketim Dağılımı</h3>
-                  <p className="subtitle">Eve ve odalara tıklayarak anlık cihaz watt değerlerini ve tarife durumunu inceleyin.</p>
+                  <h3>
+                    Kat & Oda Bazlı Tüketim Dağılımı
+                  </h3>
+
+                  <p className="subtitle">
+                    Eve ve odalara tıklayarak anlık
+                    cihaz watt değerlerini ve tarife
+                    durumunu inceleyin.
+                  </p>
                 </div>
+
                 <div className="floor-filter-chips">
+
                   <button
                     type="button"
-                    className={`floor-chip ${selectedFloor === "all" ? "active" : ""}`}
-                    onClick={() => setSelectedFloor("all")}
+                    className={`floor-chip ${
+                      selectedFloor === "all"
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setSelectedFloor("all")
+                    }
                   >
-                    Tüm Odalar ({Object.keys(roomsMap).length})
+                    Tüm Odalar (
+                    {Object.keys(roomsMap).length}
+                    )
                   </button>
-                  {Object.keys(roomsMap).map((room) => (
-                    <button
-                      key={room}
-                      type="button"
-                      className={`floor-chip ${selectedFloor === room ? "active" : ""}`}
-                      onClick={() => setSelectedFloor(room)}
-                    >
-                      {room}
-                    </button>
-                  ))}
+
+                  {Object.keys(roomsMap).map(
+                    (room) => (
+                      <button
+                        key={room}
+                        type="button"
+                        className={`floor-chip ${
+                          selectedFloor === room
+                            ? "active"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          setSelectedFloor(room)
+                        }
+                      >
+                        {room}
+                      </button>
+                    )
+                  )}
+
                 </div>
               </div>
 
-              {/* Floor Plan Diagram Cards Grid */}
+              {/* Floor Plan Diagram Cards */}
               <div className="floorplan-rooms-grid">
+
                 {Object.entries(roomsMap)
-                  .filter(([room]) => selectedFloor === "all" || selectedFloor === room)
+                  .filter(
+                    ([room]) =>
+                      selectedFloor === "all" ||
+                      selectedFloor === room
+                  )
                   .map(([room, apps]) => {
-                    const roomKw = (apps.reduce((sum, a) => sum + a.currentWatt, 0) / 1000).toFixed(2);
-                    const hasAnomaly = apps.some((a) => a.isAnomalous);
+
+                    const roomKw = (
+                      apps.reduce(
+                        (sum, a) =>
+                          sum +
+                          (a.currentWatt || 0),
+                        0
+                      ) / 1000
+                    ).toFixed(2);
+
+                    const hasAnomaly =
+                      apps.some(
+                        (a) => a.isAnomalous
+                      );
 
                     return (
                       <div
                         key={room}
-                        className={`floorplan-room-card glass-panel ${hasAnomaly ? "has-anomaly" : ""}`}
+                        className={`floorplan-room-card glass-panel ${
+                          hasAnomaly
+                            ? "has-anomaly"
+                            : ""
+                        }`}
                       >
+
                         <div className="room-card-head">
-                          <span className="room-name">{room}</span>
-                          <strong className="room-kw mono">{roomKw} kW</strong>
+                          <span className="room-name">
+                            {room}
+                          </span>
+
+                          <strong className="room-kw mono">
+                            {roomKw} kW
+                          </strong>
                         </div>
 
                         <div className="room-devices-list">
+
                           {apps.map((app) => (
                             <div
                               key={app.id}
                               className="room-device-item"
-                              onClick={() => setSelectedGroup(app.name)}
+                              onClick={() =>
+                                setSelectedGroup(
+                                  app.name
+                                )
+                              }
                             >
-                              <span className="name">{app.name}</span>
-                              <span className="watt mono">{(app.currentWatt / 1000).toFixed(2)} kW</span>
-                              {app.isAnomalous && <span className="anomaly-dot" />}
+                              <span className="name">
+                                {app.name}
+                              </span>
+
+                              <span className="watt mono">
+                                {(
+                                  (app.currentWatt ||
+                                    0) / 1000
+                                ).toFixed(2)}{" "}
+                                kW
+                              </span>
+
+                              {app.isAnomalous && (
+                                <span className="anomaly-dot" />
+                              )}
                             </div>
                           ))}
+
                         </div>
+
                       </div>
                     );
                   })}
+
               </div>
+
             </div>
           )}
+
         </div>
 
         <div className="home-detail-side">
+
           <ApplianceList
             appliances={home.appliances}
-            onSelectAppliance={(a) => setSelectedGroup(a.name)}
+            onSelectAppliance={(a) =>
+              setSelectedGroup(a.name)
+            }
             onDelete={handleDeleteAppliance}
-            onAddClick={() => setModalOpen(true)}
+            onAddClick={() =>
+              setModalOpen(true)
+            }
           />
+
         </div>
+
       </div>
 
       {/* Bottom Charts & Advisory */}
       <div className="home-detail-bottom">
+
         <motion.div
           className="glass-panel chart-panel"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          initial={{
+            opacity: 0,
+            y: 16,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            delay: 0.1,
+          }}
         >
-          <h3>Günlük Tüketim Trendi</h3>
-          <ConsumptionChart data={history} />
+          <h3>
+            Günlük Tüketim Trendi
+          </h3>
+
+          <ConsumptionChart
+            data={history}
+          />
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-          style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+          initial={{
+            opacity: 0,
+            y: 16,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            delay: 0.18,
+          }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+          }}
         >
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
             <button
               type="button"
               className="btn-primary"
               onClick={handleRequestAdvisory}
               disabled={requestingAdv}
             >
-              {requestingAdv ? "Analiz Ediliyor..." : "✨ Yeni AI Önerisi İste"}
+              {requestingAdv
+                ? "Analiz Ediliyor..."
+                : "✨ Yeni AI Önerisi İste"}
             </button>
           </div>
-          <AIAdvisoryPanel advisories={home.advisories} contactEmail={home.contactEmail} />
+
+          <AIAdvisoryPanel
+            advisories={advisories}
+            contactEmail={home.contactEmail}
+          />
+
         </motion.div>
+
       </div>
 
       <ApplianceInfoDrawer
         groupName={selectedGroup}
         appliances={home.appliances}
-        onClose={() => setSelectedGroup(null)}
+        onClose={() =>
+          setSelectedGroup(null)
+        }
       />
 
       <AddApplianceModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() =>
+          setModalOpen(false)
+        }
         onSubmit={handleAddAppliance}
         submitting={submitting}
       />
+
     </div>
   );
 }
